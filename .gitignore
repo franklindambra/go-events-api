@@ -1,2 +1,3 @@
 api.db
 go.sum
+.env
