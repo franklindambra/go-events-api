@@ -33,13 +33,21 @@ import (
 
 
 	func createEvent(ctx *gin.Context){
+
 		var event models.Event //var of type event
 		err :=ctx.ShouldBindJSON(&event) //bind req payload to type, can accept partial where binding not enforced
 		if err != nil {
 			ctx.JSON(400, gin.H{"message": "could not parse request data"})
 			return
 		}
+		//fields
+		
+		userId := ctx.GetInt64("userId")
+		event.UserID = userId
+
 		event.DateTime = time.Now()
+
+		//
 		err = event.Save()
 		if err != nil {
 			ctx.JSON(500, gin.H{"message": "Could not save event"})
@@ -54,10 +62,17 @@ import (
 		if err != nil {
 			ctx.JSON(500, gin.H{"message": "Could not parse event ID"})
 		}
-		_, err = models.GetEventByID(eventId)
+		userId := ctx.GetInt64("userId")
+		event, err := models.GetEventByID(eventId)
 		if err != nil {
 			ctx.JSON(500, gin.H{"message": "Update: could not locate ID"})
 		}
+
+		if event.UserID != userId {
+			ctx.JSON(401, gin.H{"message": "Not authorized to update event"})
+			return
+		}
+
 		var updatedEvent models.Event
 		err =ctx.ShouldBindJSON(&updatedEvent)
 		if err != nil{
@@ -80,9 +95,14 @@ import (
 		if err != nil {
 			ctx.JSON(500, gin.H{"message": "Could not parse event ID"})
 		}
+		userId := ctx.GetInt64("userId")
 		event, err := models.GetEventByID(eventId)
 		if err != nil {
 			ctx.JSON(500, gin.H{"message": "Delete: could not locate ID"})
+			return
+		}
+		if event.UserID != userId{
+			ctx.JSON(401, gin.H{"message": "Not authorized to delete event"})
 			return
 		}
 		err = event.Delete()
